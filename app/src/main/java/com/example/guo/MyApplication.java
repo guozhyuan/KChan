@@ -16,22 +16,46 @@ import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 import com.nostra13.universalimageloader.core.assist.QueueProcessingType;
 import com.nostra13.universalimageloader.core.decode.BaseImageDecoder;
 import com.nostra13.universalimageloader.core.download.BaseImageDownloader;
+import com.squareup.okhttp.Call;
+import com.squareup.okhttp.Callback;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
+
+import java.io.IOException;
 
 
 /**
  * Created by G on 2015/12/23.
+ *
  */
 public class MyApplication extends Application {
 
     public static Context context;
     public static Handler handler;
-
+    public static OkHttpClient client;
     @Override
     public void onCreate() {
         super.onCreate();
         context = this;
         initImageLoader(context);
         handler = new Handler();
+        client = new OkHttpClient();
+
+        Request request  =  new Request.Builder().build();
+        client.newCall(request).enqueue(new Callback() {
+           @Override
+           public void onFailure(Request request, IOException e) {
+
+           }
+
+           @Override
+           public void onResponse(Response response) throws IOException {
+
+           }
+       });
+
+        Request r1 = new Request.Builder().build();
     }
 
     public static void initImageLoader(Context context) {
@@ -53,7 +77,10 @@ public class MyApplication extends Application {
 //		ImageLoader.getInstance().init( ImageLoaderConfiguration.createDefault(this));
     }
 
-    /* public  void initImageLoader() {
+    /*
+        官方提供的示例
+     */
+ /*    public  void initImageLoader() {
          ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(context)
                  .memoryCacheExtraOptions(480, 800) // default = device screen dimensions
                   .threadPoolSize(3) // default
@@ -73,13 +100,18 @@ public class MyApplication extends Application {
                  .writeDebugLogs()
                  .build();
          ImageLoader.getInstance().init(config);
-     }
- */
+     }*/
     public static Context getContext() {
         return context;
+    }
+
+    public static OkHttpClient getOkClient(){
+        return client;
     }
 
     public static Handler getMainHandler() {
         return handler;
     }
+
+    //加上一句话
 }

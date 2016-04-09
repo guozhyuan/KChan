@@ -8,6 +8,24 @@ public class ImgBean implements Serializable {
     private String source;
     private String detail;
     private String href;
+    private int height;
+    private int width;
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
 
     public String getHref() {
         return href;

@@ -1,6 +1,8 @@
 package com.example.guo.ui;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.Fragment;
@@ -18,6 +20,8 @@ import com.example.guo.R;
 import com.example.guo.bean.ImgBean;
 import com.example.guo.util.CommonUtil;
 import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.assist.FailReason;
+import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -39,7 +43,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 
-
+/**
+ * Create by g
+ */
 public class FirstFragment extends Fragment {
     private String baseUrl;
     private SwipeRefreshLayout swipe;
@@ -47,8 +53,10 @@ public class FirstFragment extends Fragment {
     //private final String url = "http://m.photo.67.com/";
     //private final String url = "http://www.deviantart.com/browse/all/?offset=0";
     //private final String url = "https://www.artstation.com/artwork?sorting=best_of_2015";
-    private final String url = "http://konachan.net/post?page=1&tags=";
-    private static int currentPage = 0;
+    //private final String url = "http://konachan.net/post?page=1&tags=";
+    private static int currentPage = 1;
+//    private String url = "http://konachan.net/post?page="+currentPage+"&tags=";
+    private String url = "http://konachan.net/post?page=";
     private ArrayList<ImgBean> totalList = new ArrayList<ImgBean>();
     private RecyclerView recyclerView;
 
@@ -59,12 +67,14 @@ public class FirstFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_first, container, false);
         swipe = (SwipeRefreshLayout) view.findViewById(R.id.swipe);
         recyclerView = (RecyclerView) view.findViewById(R.id.recycler);
+        //SpacesItemDecoration decoration=new SpacesItemDecoration(16);
         swipe.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
                 new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
+                            loadNetData(url+currentPage);
                         swipe.setRefreshing(false);
                     }
                 }, 3000);
@@ -72,15 +82,12 @@ public class FirstFragment extends Fragment {
         });
         adapter = new MyAdapter();
         recyclerView.setAdapter(adapter);
-        initData(url);
+        loadNetData(url+currentPage);
         recyclerView.setLayoutManager(new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL));
+        recyclerView.addItemDecoration(new SpacesItemDecoration(5));
+
         return view;
     }
-
-    private void initData(final String url) {
-        loadNetData(url);
-    }
-
 
     /**
      * 加载网络数据
@@ -99,9 +106,6 @@ public class FirstFragment extends Fragment {
 //                            .header("Connection","keep-alive")
 //                            .header("Host","www.artstation.com")
 //                            .timeout(10000).get();
-                //先用HttpUrlConnection/OkHttp等获取到网页的源码,再使用Jsoup.parse()解析得的到网页内容,未测试
-                //该网站内容是延迟加载的,该如何解决?
-                //Q:如何爬去延迟加载的网页?
                 parseHtml(url);
             }
         }).start();
@@ -109,7 +113,7 @@ public class FirstFragment extends Fragment {
 
     /**
      * 获取网页源码
-     *
+     * 未使用
      * @param url
      */
     private void getHtml(final String url) {
@@ -146,25 +150,33 @@ public class FirstFragment extends Fragment {
      * @param html
      */
     private void parseHtml(String html) {
-        //Document doc = Jsoup.parse(html);
+        currentPage ++;
         Document doc = null;
         try {
             doc = Jsoup.connect(html).timeout(5000).get();
-
-            //https://www.artstation.com/artwork?sorting=best_of_2015
-            Elements els = doc.select("#post-list-posts");
-            Log.e("gg","doc wendang:"+doc.html());
-            Log.e("gg", "element count:" + els.size() + "");
+            //Log.e("gg",doc.html());
+           // Elements els = doc.select("ul#post-list-posts");
+            Elements els = doc.select("div.inner");
             ArrayList<ImgBean> currentList = new ArrayList<ImgBean>();
             ImgBean bean = null;
             for (Element element : els) {
                 bean = new ImgBean();
                 String src = element.select("a.thumb").select("img").attr("src");
+                int width = Integer.parseInt(element.select("a.thumb").select("img").attr("width"));
+                int height = Integer.parseInt(element.select("a.thumb").select("img").attr("height"));
                 bean.setSrc(src);
+                bean.setWidth(width);
+                bean.setHeight(height);
+                //bean.setDetail(detail);
                 currentList.add(bean);
+
+                Log.e("gg","imgURL"+src);
             }
-            Log.e("gg", "currentList" + currentList.size() + "");
+
+
+            Log.e("gg", "currentList:" + currentList.size() + "条");
             totalList.addAll(currentList);
+
             save2Local(totalList, "all_backup");//应该放在子线程
             if (currentList != null) {
 
@@ -172,12 +184,12 @@ public class FirstFragment extends Fragment {
                     @Override
                     public void run() {
                         adapter.notifyDataSetChanged();
-                        Log.e("gg", "adapter count" + adapter.getItemCount() + "");
                     }
                 });
             }
         } catch (IOException e) {
             e.printStackTrace();
+            Log.e("gg","报异常了!?");
         }
     }
 
@@ -290,7 +302,31 @@ public class FirstFragment extends Fragment {
 //                holder.img.setImageBitmap(BitmapFactory.decodeFile(imgFile.getAbsolutePath()));
 //                System.out.println("从本地加载的图片");
 //            }
-            ImageLoader.getInstance().displayImage(totalList.get(position).getSrc(), holder.img);
+            int height = totalList.get(position).getHeight();
+            int width = totalList.get(position).getWidth();
+            holder.img.setOriginalSize(width,height);
+            holder.img.setImageResource(R.drawable.bg_card);//必须设置默认的图片!卧了个大槽
+            ImageLoader.getInstance().displayImage(totalList.get(position).getSrc(), holder.img, ImageLoaderOptions.list_options, new ImageLoadingListener() {
+                @Override
+                public void onLoadingStarted(String s, View view) {
+
+                }
+
+                @Override
+                public void onLoadingFailed(String s, View view, FailReason failReason) {
+
+                }
+
+                @Override
+                public void onLoadingComplete(String s, View view, Bitmap bitmap) {
+
+                }
+
+                @Override
+                public void onLoadingCancelled(String s, View view) {
+
+                }
+            });
             holder.tv.setText(totalList.get(position).getDetail());
         }
 
@@ -302,13 +338,43 @@ public class FirstFragment extends Fragment {
 
     class MyViewHolder extends RecyclerView.ViewHolder {
         public TextView tv;
-        public ImageView img;
+        public RatioImageView img;
 
         public MyViewHolder(View itemView) {
             super(itemView);
             tv = (TextView) itemView.findViewById(R.id.tv);
-            img = (ImageView) itemView.findViewById(R.id.img);
+            img = (RatioImageView) itemView.findViewById(R.id.img);
+
         }
     }
+
+    /**
+     * jiange
+     */
+    public class SpacesItemDecoration extends RecyclerView.ItemDecoration {
+
+        private int space;
+
+        public SpacesItemDecoration(int space) {
+
+            this.space=space;
+        }
+
+        @Override
+        public void getItemOffsets(Rect outRect, View view, RecyclerView parent, RecyclerView.State state) {
+            outRect.left=space;
+            outRect.right=space;
+            outRect.bottom=space;
+            if(parent.getChildAdapterPosition(view)==0){
+                outRect.top=space;
+            }
+        }
+    }
+
+    interface RecyclerItemOnClickListener {
+        public void OnItemClickListener();
+        public void OnItemLongClickListener();
+    }
+
 
 }

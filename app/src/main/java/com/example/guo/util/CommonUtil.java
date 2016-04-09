@@ -15,7 +15,7 @@ public class CommonUtil {
      */
     public static void runOnUiThread(Runnable runnable){
         Handler handler = MyApplication.getMainHandler();
-        Log.e("ff","--------------------"+handler+"---"+runnable);
+        //Log.e("ff","--------------------"+handler+"---"+runnable);
         handler.post(runnable);
     }
 
