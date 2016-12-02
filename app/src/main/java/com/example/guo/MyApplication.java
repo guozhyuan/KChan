@@ -41,21 +41,6 @@ public class MyApplication extends Application {
         initImageLoader(context);
         handler = new Handler();
         client = new OkHttpClient();
-
-        Request request  =  new Request.Builder().build();
-        client.newCall(request).enqueue(new Callback() {
-           @Override
-           public void onFailure(Request request, IOException e) {
-
-           }
-
-           @Override
-           public void onResponse(Response response) throws IOException {
-
-           }
-       });
-
-        Request r1 = new Request.Builder().build();
     }
 
     public static void initImageLoader(Context context) {
@@ -70,7 +55,7 @@ public class MyApplication extends Application {
         config.diskCacheSize(50 * 1024 * 1024); // 50 MiB
         //内存缓存大小默认是：app可用内存的1/8
         config.tasksProcessingOrder(QueueProcessingType.LIFO);
-        config.writeDebugLogs(); // Remove for release app
+        //config.writeDebugLogs(); // Remove for release app
 
         // Initialize ImageLoader with configuration.
         ImageLoader.getInstance().init(config.build());

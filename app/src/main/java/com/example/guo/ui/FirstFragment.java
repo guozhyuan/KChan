@@ -13,12 +13,13 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.example.guo.R;
 import com.example.guo.bean.ImgBean;
 import com.example.guo.util.CommonUtil;
+import com.example.guo.util.RecyclerItemClickListener;
+import com.example.guo.util.SuperSwipeRefreshLayout;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.assist.FailReason;
 import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
@@ -47,15 +48,16 @@ import java.util.ArrayList;
  * Create by g
  */
 public class FirstFragment extends Fragment {
+    private static String TAG = "FirstFragment";
     private String baseUrl;
-    private SwipeRefreshLayout swipe;
+    private SuperSwipeRefreshLayout swipe;
     private MyAdapter adapter;
     //private final String url = "http://m.photo.67.com/";
     //private final String url = "http://www.deviantart.com/browse/all/?offset=0";
     //private final String url = "https://www.artstation.com/artwork?sorting=best_of_2015";
     //private final String url = "http://konachan.net/post?page=1&tags=";
     private static int currentPage = 1;
-//    private String url = "http://konachan.net/post?page="+currentPage+"&tags=";
+    //    private String url = "http://konachan.net/post?page="+currentPage+"&tags=";
     private String url = "http://konachan.net/post?page=";
     private ArrayList<ImgBean> totalList = new ArrayList<ImgBean>();
     private RecyclerView recyclerView;
@@ -65,24 +67,73 @@ public class FirstFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_first, container, false);
-        swipe = (SwipeRefreshLayout) view.findViewById(R.id.swipe);
+        swipe = (SuperSwipeRefreshLayout) view.findViewById(R.id.swipe);
         recyclerView = (RecyclerView) view.findViewById(R.id.recycler);
         //SpacesItemDecoration decoration=new SpacesItemDecoration(16);
-        swipe.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+
+
+        swipe.setOnPullRefreshListener(new SuperSwipeRefreshLayout.OnPullRefreshListener() {
             @Override
             public void onRefresh() {
+                currentPage = 1;
+                loadNetData(url + currentPage);
                 new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                            loadNetData(url+currentPage);
                         swipe.setRefreshing(false);
+                        adapter.notifyDataSetChanged();
+                        Log.e(TAG, "run: currentPage = " + currentPage);
                     }
                 }, 3000);
             }
+
+            @Override
+            public void onPullDistance(int distance) {
+
+            }
+
+            @Override
+            public void onPullEnable(boolean enable) {
+
+            }
         });
+        swipe.setOnPushLoadMoreListener(new SuperSwipeRefreshLayout.OnPushLoadMoreListener() {
+            @Override
+            public void onLoadMore() {
+                currentPage++;
+                loadNetData(url + currentPage);
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+//                        totalList.clear();
+                        swipe.setLoadMore(false);
+                        adapter.notifyDataSetChanged();
+                        Log.e(TAG, "run: currentPage = " + currentPage);
+                    }
+                }, 3000);
+            }
+
+            @Override
+            public void onPushDistance(int distance) {
+
+            }
+
+            @Override
+            public void onPushEnable(boolean enable) {
+
+            }
+        });
+
+        recyclerView.addOnItemTouchListener(new RecyclerItemClickListener(getActivity(), new RecyclerItemClickListener.OnItemClickListener() {
+            @Override
+            public void onItemClick(View view, int position) {
+                //TODO
+            }
+        }));
+
         adapter = new MyAdapter();
         recyclerView.setAdapter(adapter);
-        loadNetData(url+currentPage);
+        loadNetData(url + currentPage);
         recyclerView.setLayoutManager(new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL));
         recyclerView.addItemDecoration(new SpacesItemDecoration(5));
 
@@ -114,6 +165,7 @@ public class FirstFragment extends Fragment {
     /**
      * 获取网页源码
      * 未使用
+     *
      * @param url
      */
     private void getHtml(final String url) {
@@ -150,12 +202,12 @@ public class FirstFragment extends Fragment {
      * @param html
      */
     private void parseHtml(String html) {
-        currentPage ++;
+
         Document doc = null;
         try {
             doc = Jsoup.connect(html).timeout(5000).get();
             //Log.e("gg",doc.html());
-           // Elements els = doc.select("ul#post-list-posts");
+            // Elements els = doc.select("ul#post-list-posts");
             Elements els = doc.select("div.inner");
             ArrayList<ImgBean> currentList = new ArrayList<ImgBean>();
             ImgBean bean = null;
@@ -170,7 +222,7 @@ public class FirstFragment extends Fragment {
                 //bean.setDetail(detail);
                 currentList.add(bean);
 
-                Log.e("gg","imgURL"+src);
+                Log.e("gg", "imgURL" + src);
             }
 
 
@@ -189,7 +241,7 @@ public class FirstFragment extends Fragment {
             }
         } catch (IOException e) {
             e.printStackTrace();
-            Log.e("gg","报异常了!?");
+            Log.e("gg", "报异常了!?");
         }
     }
 
@@ -204,7 +256,6 @@ public class FirstFragment extends Fragment {
         ObjectOutputStream oos = null;
         try {
             fos = getActivity().openFileOutput(str, Context.MODE_PRIVATE);
-
             oos = new ObjectOutputStream(fos);
             oos.writeObject(totalList);
             oos.flush();
@@ -304,7 +355,7 @@ public class FirstFragment extends Fragment {
 //            }
             int height = totalList.get(position).getHeight();
             int width = totalList.get(position).getWidth();
-            holder.img.setOriginalSize(width,height);
+            holder.img.setOriginalSize(width, height);
             holder.img.setImageResource(R.drawable.bg_card);//必须设置默认的图片!卧了个大槽
             ImageLoader.getInstance().displayImage(totalList.get(position).getSrc(), holder.img, ImageLoaderOptions.list_options, new ImageLoadingListener() {
                 @Override
@@ -357,22 +408,23 @@ public class FirstFragment extends Fragment {
 
         public SpacesItemDecoration(int space) {
 
-            this.space=space;
+            this.space = space;
         }
 
         @Override
         public void getItemOffsets(Rect outRect, View view, RecyclerView parent, RecyclerView.State state) {
-            outRect.left=space;
-            outRect.right=space;
-            outRect.bottom=space;
-            if(parent.getChildAdapterPosition(view)==0){
-                outRect.top=space;
+            outRect.left = space;
+            outRect.right = space;
+            outRect.bottom = space;
+            if (parent.getChildAdapterPosition(view) == 0) {
+                outRect.top = space;
             }
         }
     }
 
     interface RecyclerItemOnClickListener {
         public void OnItemClickListener();
+
         public void OnItemLongClickListener();
     }
 

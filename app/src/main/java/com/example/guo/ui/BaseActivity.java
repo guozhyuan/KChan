@@ -13,7 +13,6 @@ public abstract class BaseActivity extends FragmentActivity {
 
         initView();
         initListener();
-        initListener();
     }
     /**
      * 初始化view
